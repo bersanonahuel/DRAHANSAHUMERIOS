@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAHAN SAHUMERIOS - Catálogo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="base64_thumbnails.js"></script>
+    <style>
+        :root {
+            --bg-color: #f7f5f0;
+            --text-color: #4a5d4e;
+            --card-bg: #ffffff;
+            --accent-color: #8c9e8d;
+            --price-color: #6b8f71;
+            --accent-gradient: linear-gradient(135deg, #8c9e8d 0%, #6b8f71 100%);
+            --danger: #e07a5f;
+            --warning: #f2cc8f;
+            --success: #81b29a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Outfit', sans-serif; background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; }
+
+        /* Nav */
+        .main-nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(140,158,141,0.15);
+            padding: 0.8rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .nav-brand { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--text-color); cursor: pointer; }
+        .nav-tabs { display: flex; gap: 0.5rem; align-items: center; }
+        .nav-tab {
+            padding: 0.6rem 1.4rem; border-radius: 50px;
+            border: 1px solid rgba(140,158,141,0.2);
+            background: transparent; color: var(--text-color);
+            cursor: pointer; font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem; font-weight: 500; transition: all 0.3s ease;
+        }
+        .nav-tab:hover, .nav-tab.active { background: var(--accent-gradient); color: white; border-color: transparent; }
+        .admin-only { display: none !important; }
+        body.is-admin .admin-only { display: flex !important; }
+        body.is-admin .admin-only.nav-tab { display: inline-flex !important; }
+        .admin-toggle {
+            padding: 0.5rem 1rem; border-radius: 50px; border: 1px solid rgba(140,158,141,0.15);
+            background: transparent; color: #7d8b7b; cursor: pointer;
+            font-family: 'Outfit', sans-serif; font-size: 0.8rem; transition: all 0.3s;
+        }
+        .admin-toggle:hover { background: rgba(140,158,141,0.1); }
+        body.is-admin .admin-toggle { background: var(--danger); color: white; border-color: transparent; }
+
+        /* Sections */
+        .section { display: none; padding: 2rem; max-width: 1300px; margin: 0 auto; }
+        .section.active { display: block; }
+        .section-header { text-align: center; padding: 2.5rem 0; margin-bottom: 2rem; }
+        .section-header h1 { font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 400; letter-spacing: 2px; }
+        .section-header p { font-size: 1.1rem; font-weight: 300; color: #7d8b7b; margin-top: 0.5rem; }
+
+        /* Buttons */
+        .action-bar { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+        .btn {
+            padding: 0.75rem 1.8rem; border-radius: 50px; border: none;
+            font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 500;
+            cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary { background: var(--accent-gradient); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(107,143,113,0.3); }
+        .btn-outline { background: transparent; color: var(--text-color); border: 1.5px solid var(--accent-color); }
+        .btn-outline:hover { background: var(--accent-color); color: white; }
+
+        /* Catalog Grid */
+        .catalog-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
+        .product-card {
+            background: var(--card-bg); border-radius: 16px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            display: flex; flex-direction: column; border: 1px solid rgba(140,158,141,0.1);
+        }
+        .product-card:hover { transform: translateY(-6px); box-shadow: 0 15px 40px rgba(0,0,0,0.08); }
+        .product-image-container { width: 100%; height: 240px; overflow: hidden; background: #eff0eb; }
+        .product-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+        .product-card:hover .product-image { transform: scale(1.05); }
+        .product-card.dragover { border: 2px dashed var(--accent-color); background: rgba(140,158,141,0.05); transform: scale(1.02); }
+        .product-info { padding: 1.2rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .admin-edit-badge {
+            position: absolute; top: -15px; right: 15px; background: var(--accent-color);
+            padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: bold;
+            color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); pointer-events: none;
+            display: none; z-index: 10;
+        }
+        body.is-admin .product-card:hover .admin-edit-badge { display: block; animation: badgeIn 0.2s ease; }
+        @keyframes badgeIn { from{ opacity:0; transform:translateY(5px); } to{ opacity:1; transform:translateY(0); } }
+        .product-title {
+            font-size: 0.9rem; font-weight: 500; line-height: 1.4; text-transform: capitalize;
+            margin-bottom: 0.8rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .product-footer { margin-top: auto; padding-top: 0.8rem; border-top: 1px solid rgba(140,158,141,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .product-price { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 600; color: var(--price-color); }
+        .currency { font-size: 1rem; font-weight: 400; margin-right: 0.2rem; }
+        .product-stock { font-size: 0.8rem; font-weight: 500; padding: 0.25rem 0.7rem; border-radius: 20px; }
+        .stock-ok { background: rgba(129,178,154,0.15); color: #5a9e6f; }
+        .stock-low { background: rgba(242,204,143,0.3); color: #c4940a; }
+        .stock-out { background: rgba(224,122,95,0.15); color: #c0503a; }
+        .no-products { text-align: center; padding: 4rem 2rem; grid-column: 1/-1; }
+        .no-products h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .no-products p { color: #7d8b7b; }
+
+        /* Stock Table */
+        .stock-table-wrap { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .stock-search {
+            width: 100%; padding: 1rem 1.5rem; border: none; border-bottom: 1px solid rgba(140,158,141,0.1);
+            font-family: 'Outfit', sans-serif; font-size: 1rem; background: transparent; outline: none;
+        }
+        .stock-table { width: 100%; border-collapse: collapse; }
+        .stock-table th {
+            padding: 1rem 1.2rem; text-align: left; font-weight: 600; font-size: 0.85rem;
+            text-transform: uppercase; letter-spacing: 1px; color: #7d8b7b;
+            background: rgba(140,158,141,0.05); border-bottom: 2px solid rgba(140,158,141,0.1);
+        }
+        .stock-table td { padding: 0.9rem 1.2rem; border-bottom: 1px solid rgba(140,158,141,0.06); font-size: 0.9rem; vertical-align: middle; }
+        .stock-table tr:hover td { background: rgba(140,158,141,0.03); }
+        .stock-input {
+            width: 70px; padding: 0.4rem 0.6rem; border-radius: 8px;
+            border: 1.5px solid rgba(140,158,141,0.2); font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem; text-align: center; outline: none; transition: border 0.3s;
+        }
+        .stock-input:focus { border-color: var(--accent-color); }
+
+        /* Stats */
+        .stats-row { display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .stat-card { flex: 1; min-width: 200px; background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 5px 20px rgba(0,0,0,0.04); }
+        .stat-card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #7d8b7b; margin-bottom: 0.5rem; }
+        .stat-card .stat-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 600; color: var(--price-color); }
+
+        /* Login Modal */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 200;
+            justify-content: center; align-items: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: white; border-radius: 20px; padding: 2.5rem; width: 90%; max-width: 400px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.15); text-align: center;
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-box h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 0.5rem; }
+        .modal-box p { color: #7d8b7b; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .modal-input {
+            width: 100%; padding: 0.9rem 1.2rem; border-radius: 12px;
+            border: 1.5px solid rgba(140,158,141,0.2); font-family: 'Outfit', sans-serif;
+            font-size: 1rem; outline: none; margin-bottom: 1rem; transition: border 0.3s;
+        }
+        .modal-input:focus { border-color: var(--accent-color); }
+        .modal-error { color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; }
+
+        /* Import */
+        .import-zone {
+            border: 2px dashed rgba(140,158,141,0.3); border-radius: 16px;
+            padding: 3rem; text-align: center; background: rgba(255,255,255,0.5);
+            transition: all 0.3s; cursor: pointer; margin-bottom: 2rem;
+        }
+        .import-zone:hover, .import-zone.dragover { border-color: var(--accent-color); background: rgba(140,158,141,0.05); }
+        .import-zone h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .import-zone p { color: #7d8b7b; font-size: 0.9rem; }
+        .import-results { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 5px 20px rgba(0,0,0,0.04); display: none; }
+        .import-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(140,158,141,0.06); font-size: 0.9rem; }
+        .import-item .qty { font-weight: 600; color: var(--price-color); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 2rem;
+            background: #333; color: white; border-radius: 12px;
+            font-family: 'Outfit', sans-serif; font-size: 0.95rem;
+            transform: translateY(100px); opacity: 0; transition: all 0.4s; z-index: 999;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        footer { text-align: center; padding: 2rem; font-size: 0.85rem; color: #7d8b7b; }
+
+        @media (max-width: 768px) {
+            .section-header h1 { font-size: 2rem; }
+            .catalog-container { gap: 1rem; }
+            .nav-tabs { gap: 0.25rem; }
+            .nav-tab { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
+            .stats-row { gap: 0.8rem; }
+            .main-nav { padding: 0.6rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="main-nav">
+    <div class="nav-brand" onclick="switchTab('catalogo')">DRAHAN SAHUMERIOS</div>
+    <div class="nav-tabs">
+        <button class="nav-tab active" data-tab="catalogo" onclick="switchTab('catalogo')">📋 Catálogo</button>
+        <button class="nav-tab admin-only" data-tab="stock" onclick="switchTab('stock')">📦 Stock</button>
+        <button class="nav-tab admin-only" data-tab="importar" onclick="switchTab('importar')">📄 Importar Pedido</button>
+        <button class="admin-toggle" id="admin-btn" onclick="toggleAdmin()">🔒 Admin</button>
+    </div>
+</nav>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="login-modal">
+    <div class="modal-box">
+        <h2>🔐 Acceso Administrador</h2>
+        <p>Ingresá la contraseña para gestionar el stock</p>
+        <input type="password" class="modal-input" id="admin-pass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="modal-error" id="login-error">❌ Contraseña incorrecta</div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">Ingresar</button>
+        <br><br>
+        <button class="btn btn-outline" style="width:100%;justify-content:center" onclick="closeModal()">Cancelar</button>
+    </div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal-overlay" id="product-modal" onclick="closeProductModal(event)">
+    <div class="modal-box" style="max-width: 500px; padding: 1.5rem; background: transparent; box-shadow: none; position: relative;">
+        <span style="position: absolute; top: -10px; right: 0px; font-size: 2.5rem; color: white; cursor: pointer; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5);" onclick="closeProductModal(event)">&times;</span>
+        <img id="modal-product-img" src="" style="width: 100%; border-radius: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.5); background: white;">
+        <h3 id="modal-product-title" style="color: white; margin-top: 1.5rem; font-family: 'Playfair Display', serif; font-size: 1.6rem; text-shadow: 1px 2px 5px rgba(0,0,0,0.8);"></h3>
+    </div>
+</div>
+
+<!-- CATÁLOGO (PÚBLICO) -->
+<div class="section active" id="sec-catalogo">
+    <div class="section-header">
+        <h1>DRAHAN SAHUMERIOS</h1>
+        <p>Catálogo de Productos Exclusivos</p>
+    </div>
+    <div class="action-bar">
+        <button class="btn btn-primary" onclick="downloadCatalogPDF()">📥 Descargar Catálogo (PDF)</button>
+    </div>
+    <div class="action-bar admin-only">
+        <button class="btn btn-outline" onclick="downloadStockPDF()">📦 Descargar Stock (PDF)</button>
+        <button class="btn btn-outline" onclick="downloadPriceListPDF()">💰 Lista de Precios (PDF)</button>
+    </div>
+    <main class="catalog-container" id="catalog"></main>
+</div>
+
+<!-- STOCK (ADMIN) -->
+<div class="section" id="sec-stock">
+    <div class="section-header">
+        <h1>Gestión de Stock</h1>
+        <p>Panel de administración — Solo visible para vos</p>
+    </div>
+    <div class="stats-row" id="stats-row"></div>
+    <div class="action-bar">
+        <button class="btn btn-primary" onclick="downloadStockPDF()">📥 Descargar Stock (PDF)</button>
+        <button class="btn btn-outline" onclick="downloadPriceListPDF()">💰 Lista de Precios (PDF)</button>
+        <button class="btn btn-outline" onclick="saveStock()">💾 Guardar Cambios</button>
+        <button class="btn btn-primary" style="background:var(--danger)" onclick="exportToIA()">📤 Extraer mis fotos para subir a Internet</button>
+    </div>
+    <div class="stock-table-wrap">
+        <input type="text" class="stock-search" id="stock-search" placeholder="🔍 Buscar producto..." oninput="filterStock()">
+        <table class="stock-table">
+            <thead><tr><th>#</th><th>Producto</th><th>Precio Costo</th><th>Precio Público</th><th>Stock</th><th>Estado</th></tr></thead>
+            <tbody id="stock-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- IMPORTAR (ADMIN) -->
+<div class="section" id="sec-importar">
+    <div class="section-header">
+        <h1>Importar Pedido</h1>
+        <p>Subí el PDF del pedido del proveedor para actualizar el stock</p>
+    </div>
+    <div class="import-zone" id="import-zone" onclick="document.getElementById('pdf-input').click()">
+        <h3>📄 Arrastrá o hacé clic para subir el PDF del pedido</h3>
+        <p>Se leerá el contenido y se actualizará el stock según las cantidades</p>
+        <input type="file" id="pdf-input" accept=".pdf,.txt,.csv" style="display:none" onchange="handleFileUpload(event)">
+    </div>
+    <div class="import-zone" style="border-style: solid; border-color: rgba(140,158,141,0.2);">
+        <h3>📝 ¿O preferís pegar el texto del pedido?</h3>
+        <p style="margin-bottom:1rem">Pegá el contenido del pedido (mismo formato que los datos del catálogo)</p>
+        <textarea id="manual-import" style="width:100%;height:150px;border:1.5px solid rgba(140,158,141,0.2);border-radius:12px;padding:1rem;font-family:'Outfit',sans-serif;font-size:0.9rem;resize:vertical;outline:none;" placeholder="Imagen&#9;SAHUMERIOS ...&#9;$860,70&#9;3&#9;$2582,10"></textarea>
+        <br><br>
+        <button class="btn btn-primary" onclick="processManualImport()">🔄 Procesar e Importar</button>
+    </div>
+    <div class="import-results" id="import-results">
+        <h3>📊 Resultado de la importación</h3>
+        <div id="import-items"></div>
+        <br>
+        <button class="btn btn-primary" onclick="applyImport()">✅ Aplicar cambios al stock</button>
+        <button class="btn btn-outline" onclick="cancelImport()">❌ Cancelar</button>
+    </div>
+<footer><p>DRAHAN SAHUMERIOS © 2026 — Precios sujetos a modificaciones</p></footer>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-database-compat.js"></script>
+<script>
+// ===== GLOBALS & ONERROR =====
+window.onerror = function(msg, url, line, col, error) {
+    alert('JS Error: ' + msg + '\nLinea: ' + line + '\nx: ' + error);
+};
+
+// ===== CONFIG =====
+const ADMIN_PASS = 'armonia2026';
+let isAdmin = false;
+
+// ===== DATA =====
+const RAW_DATA = `Imagen\tSAHUMERIOS DUENDES ALQUIMISTAS - VAINILLA ENCANTADA\t$860,70\t1\t$860,70
+Imagen\tSAHUMERIOS DUENDES ALQUIMISTAS - MUSK\t$860,70\t1\t$860,70
+Imagen\tSAHUMERIOS DUENDES ALQUIMISTAS - SALVIA BLANCA\t$860,70\t1\t$860,70
+Imagen\tSAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - BERRIES\t$490,26\t1\t$490,26
+Imagen\tSAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - AQUA\t$490,26\t1\t$490,26
+Imagen\tSAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - LEMONGRASS\t$490,26\t1\t$490,26
+Imagen\tSAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - MANGO\t$490,26\t1\t$490,26
+Imagen\tSAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - SANDIA\t$490,26\t1\t$490,26
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - CHAMPA\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - COCO\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - JAZMIN\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - LAVANDA\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - PATCHOULI\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - ROSA\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - SANDAL WOOD\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - VIOLETAS\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA HEXAGONAL x 15 PROMO - VAINILLA\t$440,08\t1\t$440,08
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - CHAMPA\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - FRUTILLA\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - INCIENSO\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - LAVANDA FRANCESA\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - MIRRA\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - REINA DE LA NOCHE\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - SÁNDALO\t$375,62\t1\t$375,62
+Imagen\tSAHUMERIOS 7 CHAKRAS ( 7 X 3 ) ILUMINARTE -\t$970,91\t1\t$970,91
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - 212 PARFUM\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ATRAE DINERO (RIQUEZA)\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ABUNDANCIA (PROSPERIDAD)\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - BUENA ONDA (FUERZA POSITIVA)\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - FELICIDAD (ALEGRIA Y DICHA)\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - LIMPIEZA (QUITA MALA ONDA)\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - VARIEDAD\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ENERGÍA LIMPIA\t$510,44\t1\t$510,44
+Imagen\tSAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD PROMO - VIOLETAS\t$290,99\t1\t$290,99
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - BERRIES\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - FRUTILLA\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - MANGO\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - VAINILLA\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - SÁNDALO\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - ROSA\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - PALO SANTO\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - LIMÓN\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - LAVANDA\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - INCIENSO\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS INDIA PAQUETE X 15 - ATRAE DINERO\t$420,44\t1\t$420,44
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - FRAGANCIA ORIENTAL\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - DIAMANTE NEGRO\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - FRUTOS ROJOS\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - GARDENIA Y FLORES BLANCAS\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - LA VIDA ES BELLA\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - NARANJA PIMIENTA\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - SANDALO HINDU\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - VARIEDAD\t$960,59\t1\t$960,59
+Imagen\tSAHUMERIOS MINI PALO SANTO BUENA ONDA - COCO VAI\t$655,28\t1\t$655,28
+Imagen\tSAHUMERIOS MINI PALO SANTO BUENA ONDA - YAGRA\t$655,28\t1\t$655,28
+Imagen\tSAHUMERIOS MINI PALO SANTO BUENA ONDA - VARIEDAD\t$655,28\t1\t$655,28
+Imagen\tSAHUMERIOS MINI TIBETANO AROMANZA - REAL ROSE\t$980,53\t1\t$980,53
+Imagen\tSAHUMERIOS MINI TIBETANO AROMANZA - OCEAN BLUE\t$980,53\t1\t$980,53
+Imagen\tSAHUMERIOS MINI TIBETANO AROMANZA - NECTAR DE LOS DIOSES\t$980,53\t1\t$980,53
+Imagen\tSAHUMERIOS MINI TIBETANO AROMANZA - VARIEDAD\t$980,53\t1\t$980,53
+Imagen\tSAHUMERIOS MINI TIBETANO AROMANZA - 7 PODERES\t$980,53\t1\t$980,53
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ABUNDANCIA INFINITA\t$545,33\t1\t$545,33
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ATRAE DINERO\t$545,33\t1\t$545,33
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - FUERZA INFINITA\t$545,33\t1\t$545,33
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - DESTRABE\t$545,33\t1\t$545,33
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - LIMPIEZA ENERGÉTICA\t$545,33\t1\t$545,33
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - LIMPIEZA AURICA\t$545,33\t1\t$545,33
+Imagen\tBOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ABRECAMINO\t$545,33\t1\t$545,33
+Imagen\tSAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - POMELO\t$740,70\t1\t$740,70
+Imagen\tSAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - UVA\t$740,70\t1\t$740,70
+Imagen\tSAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - MELON\t$740,70\t1\t$740,70
+Imagen\tSAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - SANDIA\t$740,70\t1\t$740,70
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - ALMIZCLE\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - ANTIESTRES\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - FLOR DE LIS\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - NAG CHAMPA\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - NARANJA - COCO\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - MIL FLORES\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - MADERA DE ORIENTE\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - OM\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - PATCHOULI Y NARANJA\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - SÁNDALO CANELA\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS VISHNU HEXAGONAL x 20 - ROSA BLANCA\t$830,16\t1\t$830,16
+Imagen\tSAHUMERIOS TUK TUK HINDU X 100 VARILLAS PROMO - BUBBLEGUM\t$1.890,16\t1\t$1.890,16
+Imagen\tSAHUMERIOS DARSHAN DHOOP - COOL WATER\t$670,07\t1\t$670,07
+Imagen\tSAHUMERIOS DARSHAN POUCH X 15 UNIDADES - AROMAS DE LA INDIA\t$460,98\t1\t$460,98
+Imagen\tSAHUMERIOS DARSHAN POUCH X 15 UNIDADES - FRUTOS TROPICALES\t$460,98\t1\t$460,98
+Imagen\tSAHUMERIOS DARSHAN POUCH X 15 UNIDADES - SALUD, DINERO Y AMOR\t$460,98\t1\t$460,98
+Imagen\tSAHUMERIOS DARSHAN POUCH X 15 UNIDADES - MIL FLORES\t$460,98\t1\t$460,98
+Imagen\tTEXTIL AMBAR 150ml. - UVA\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - PAPAYA\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - TROPICAL\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - LIMÓN\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - MAGNOLIA Y FRESIAS\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - HAWAI\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - COCO VAI\t$1.572,00\t1\t$1.572,00
+Imagen\tTEXTIL AMBAR 150ml. - BEBE\t$1.572,00\t1\t$1.572,00`;
+
+const imageMap = {
+    "SAHUMERIOS DUENDES ALQUIMISTAS - VAINILLA ENCANTADA": "img/SAHUMERIO DUENDES ALQUIMISTAS VAINILLAS ENCANTADAS POSITIVIDAD.png",
+    "SAHUMERIOS DUENDES ALQUIMISTAS - MUSK": "img/SAHUMERIO DUENDES ALQUIMISTAS MUSK BLACK LIMPIEZA.png",
+    "SAHUMERIOS DUENDES ALQUIMISTAS - SALVIA BLANCA": "img/SAHUMERIO DUENDES ALQUIMISTAS SALVIA BLANCA DISFRUTE.png",
+    "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - BERRIES": "img/BERRIES EXAGONAL.jpeg",
+    "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - AQUA": "img/SAHUMERIO EXAGONAL ILUMINARTE AQUA.png",
+    "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - LEMONGRASS": "img/SAHUMERIO EXAGONAL LEMONGRASS ILUMINARTE.png",
+    "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - MANGO": "img/SAHUMERIOS EXAGONALES ILUMINARTE MANGO.png",
+    "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - SANDIA": "img/SAHUMERIO EXAGONAL ILUMINARTE WATERMELON.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - CHAMPA": "img/SAHUMERIO CHAMPA ILUMINARTE INDIA.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - COCO": "img/SAHGUMERIO EXAGONAL ILUMINARTE INDIA COCO COCONUT.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - JAZMIN": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA JAZMINE.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - LAVANDA": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA LAVANDA.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - PATCHOULI": "img/SAHUMERIO EXAGONAL PATCHOULI.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - ROSA": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA ROSE.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - SANDAL WOOD": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA SANDAL WOOD.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - VIOLETAS": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA VIOLET.png",
+    "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - VAINILLA": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA VAINILLA.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - CHAMPA": "img/SAHUMERIO CHAMPA ILUMINARTE.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - FRUTILLA": "img/SAHUEMRIO FRUTILLA ILUMINARTE.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - INCIENSO": "img/SAHUMERIO INCIENSO ILUMINArte.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - LAVANDA FRANCESA": "img/SAHUMERIO LAVANDA ILUMINARTE.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - MIRRA": "img/SAHUMERIO MIRRA.jpeg",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - REINA DE LA NOCHE": "img/SAHUMERIO REINA DE LA NOCHE ILUMINARTE.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - S\u00c1NDALO": "img/SAHUMERIO SANDALO ILUMINARTE.png",
+    "SAHUMERIOS 7 CHAKRAS ( 7 X 3 ) ILUMINARTE -": "img/SAHUMERIO SIETE CHAKRAS.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - 212 PARFUM": "img/SAHUMERIO BOMBAY 212 PARFUM TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ATRAE DINERO (RIQUEZA)": "img/SAHUMERIO BOMBAY ATRAE DINERO TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ABUNDANCIA (PROSPERIDAD)": "img/SAHUMERIO BOMBAY ABUNDANCIA TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - BUENA ONDA (FUERZA POSITIVA)": "img/SAHUMERIO BOMBAY BUENA ONDA TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - FELICIDAD (ALEGRIA Y DICHA)": "img/SAHUMERIO BOMBAY FELICIDAD TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - LIMPIEZA (QUITA MALA ONDA)": "img/SAHUMERIO BOMBAY BUENA ONDA TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - VARIEDAD": "img/SAHUMERIO BOMBAY VARIEDAD TRIPLE EMPASTE.png",
+    "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ENERG\u00cdA LIMPIA": "img/SAHUMERIO BOMBAY ENERGIA LIMPIA TRIPLE EMPASTE.png",
+    "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD PROMO - VIOLETAS": "img/SAHUMERIO ILUMINARTE INDIA VIOLETA.png",
+    "SAHUMERIOS INDIA PAQUETE X 15 - BERRIES": "img/SAHUMERIO INDIA BERRIES.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - FRUTILLA": "img/SAHUMERIO INDIA FRUTILLA.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - MANGO": "img/SAHUMERIO INDIA MANGO.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - VAINILLA": "img/SAHUMERIO INDIA VAINILLA.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - S\u00c1NDALO": "img/SAHUMERIO SANDALO.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - ROSA": "img/SAHUMERIO ROSA.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - PALO SANTO": "img/SAHUMERIO INDIA PALO SANTO.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - LIM\u00d3N": "img/SAHUMERIO INDIA PAQUETE LIMON.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - LAVANDA": "img/SAHUMERIO INDIA LAVANDA.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - INCIENSO": "img/SAHUMERIO INDIA INCIENSO.jpeg",
+    "SAHUMERIOS INDIA PAQUETE X 15 - ATRAE DINERO": "img/SAHUMERIO ATRAE DINERO.jpeg",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - FRAGANCIA ORIENTAL": "img/SAHUMERIO PALO SANTO BUENA ONDA FRAGANCIA ORIENTAL MEDITACION AROMANZA.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - DIAMANTE NEGRO": "img/SAHUMERIO PALO SANTO BUENA ONDA DIAMANTE NEGRO AQUI Y AHORA.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - FRUTOS ROJOS": "img/SAHUMERIO PALO SANTO BUENA ONDA FRUTOS ROJOS EMPODERAMIENTO.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - GARDENIA Y FLORES BLANCAS": "img/SAHUMERIO PALO SANTO BUENA ONDA GARDENIAS FLORES BLANCAS BIENESTAR.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - LA VIDA ES BELLA": "img/SAHUMERIO PALO SANTO BUENA ONDA LA VIDA ES BELLA OPTIMISMO.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - NARANJA PIMIENTA": "img/SAHUMERIO PALO SANTO BUENA ONDA NARANJA POIMIENTA ATRACCION.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - SANDALO HINDU": "img/SAHUMERIO PALO SANTO BUENA ONDA AROMANZA SANDALO HINDU PURIFICACION.png",
+    "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - VARIEDAD": "img/SAHUMERIO PALO SANTO BUENA ONDA VARIEDAD AROMATICA BUENA ONDA.png",
+    "SAHUMERIOS MINI PALO SANTO BUENA ONDA - COCO VAI": "img/SAHUMERIO PALO SANTO BUENA ONDA MINI COCO VAINILLA PAZ INTERIOR.png",
+    "SAHUMERIOS MINI PALO SANTO BUENA ONDA - YAGRA": "img/SAHUMERIO PALO SANTO BUENA ONDA MINI YAGRA DE LA ABUNDANCIA PROSPERIDAD.png",
+    "SAHUMERIOS MINI PALO SANTO BUENA ONDA - VARIEDAD": "img/SAHUMERIO AROMANZA PAL OSANTO BUENA ONDA MINI.png",
+    "SAHUMERIOS MINI TIBETANO AROMANZA - REAL ROSE": "img/SAHUMERIO MINI TIBETANOS ROSA REAL AMOR.png",
+    "SAHUMERIOS MINI TIBETANO AROMANZA - OCEAN BLUE": "img/SAHUMERIO MINI TIBETANOS OCEAN BLUE PLENITUD.png",
+    "SAHUMERIOS MINI TIBETANO AROMANZA - NECTAR DE LOS DIOSES": "img/SAHUMERIO MINI TIBETANOS NECTAR DE LOS DIOSES CONEXION DIVINA.png",
+    "SAHUMERIOS MINI TIBETANO AROMANZA - VARIEDAD": "img/SAHUMERIO MINI TIBETANOS MIX DE FRAGANCIAS 5 FRAGANCIAS.png",
+    "SAHUMERIOS MINI TIBETANO AROMANZA - 7 PODERES": "img/SAHUMERIO AROMANZA MINI TIBITANOS 7 PODERES.png",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ABUNDANCIA INFINITA": "img/BOMBITA X4 ABUNDANCIA INFINITA SAGRADA MADRE.jpg",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ATRAE DINERO": "img/BOMBITA ATRAE DINERO X4 SAGRADA MADRE.jpg",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - FUERZA INFINITA": "img/BOMBITA X4 FUERZA INFINITA SAGRADA MADRE.jpg",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - DESTRABE": "img/BOMBITA X4 DESTRABE SAGRADA MADRE.jpg",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - LIMPIEZA ENERG\u00c9TICA": "img/BOMBITA X4 LIMPIEZA ENERGETICA SAGRADA MADRE.jpg",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - LIMPIEZA AURICA": "img/BOMBITA X 4 LIMPIEZA AURICA SAGRADA MADRE.jpg",
+    "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ABRECAMINO": "img/BOMBITA X4 ABRE CAMINOS SAGRADA MADRE.jpg",
+    "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - POMELO": "img/SAHUMERIO PREMIUM POMELO PINK GRAFERNAT SLIM.png",
+    "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - UVA": "img/SAHUMERIO PREMIUM SLIM UVA DELICIOUS GRAPE.png",
+    "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - MELON": "img/SAHUMERIO MELON SLIM.png",
+    "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - SANDIA": "img/SAHUMERIO SANDIA WATERMELON SLIM.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - ALMIZCLE": "img/SAHUMERIO EXAGONAL VISHNU ALMIZCLE.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - ANTIESTRES": "img/SAHUMERIO EXAGONALES VISHNU ANTIESTRES.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - FLOR DE LIS": "img/SAHUMERIO EXAGONAL VISHNU FLOR DE LIS.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - NAG CHAMPA": "img/SAHUMERIO EXAGONAL VISHNU NAG CHAMPA.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - NARANJA - COCO": "img/SAHUMERIO EXAGONAL VISHNU PATCHOLU Y NARANJA.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - MIL FLORES": "img/SAHUMERIO EXAGONAL VISHNU MIL FLORES.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - MADERA DE ORIENTE": "img/SAHUMERI OEXAGONAL MADERAS DE ORIENTE VISHNU.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - OM": "img/SAHUMERIO EXAGONAL VISHNU OM.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - PATCHOULI Y NARANJA": "img/SAHUMERIO EXAGONAL VISHNU PATCHOLU Y NARANJA.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - S\u00c1NDALO CANELA": "img/SAHUMERIO EXAGONAS VISHNU SANDALO Y CANELA.png",
+    "SAHUMERIOS VISHNU HEXAGONAL x 20 - ROSA BLANCA": "img/SAHUMERIO EXAGONAL VISHNU TOSA BLANCA.png",
+    "SAHUMERIOS TUK TUK HINDU X 100 VARILLAS PROMO - BUBBLEGUM": "img/BOMBITA X 4 LIMPIEZA AURICA SAGRADA MADRE.jpg",
+    "SAHUMERIOS DARSHAN DHOOP - COOL WATER": "img/SAHUMERIO COOL WATER DARSHAN INCENSE.png",
+    "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - AROMAS DE LA INDIA": "img/SAHUMERIO.COM AROMAS DE LA INDIA.png",
+    "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - FRUTOS TROPICALES": "img/SAHUMERIO.COM FRUTAS TROPICALES.png",
+    "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - SALUD, DINERO Y AMOR": "img/SAHUMERIO.COM SALUD DINERO Y AMOR.png",
+    "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - MIL FLORES": "img/SAHUMERIO.COM MIL FLORES.png",
+    "TEXTIL AMBAR 150ml. - UVA": "img/AROMATIZANTE PARA TELAS UVA.jpg",
+    "TEXTIL AMBAR 150ml. - PAPAYA": "img/AROMATIZANTE PARA TELAS PAPAYA.jpg",
+    "TEXTIL AMBAR 150ml. - TROPICAL": "img/AROMATIZANTE PARA TELA TROPICAL.jpg",
+    "TEXTIL AMBAR 150ml. - LIM\u00d3N": "img/AROMATIZANTE PARA TELAS LIMON.jpg",
+    "TEXTIL AMBAR 150ml. - MAGNOLIA Y FRESIAS": "img/SAHUMERIO EXAGONAL VISHNU PATCHOLU Y NARANJA.png",
+    "TEXTIL AMBAR 150ml. - HAWAI": "imagen.png",
+    "TEXTIL AMBAR 150ml. - COCO VAI": "img/AROMATIZANTE PARA TELAS COCO VAI.jpg",
+    "TEXTIL AMBAR 150ml. - BEBE": "img/AROMATIZANTE PARA TELAS BEBE.jpg"
+};
+const DEFAULT_PRODUCTS = [
+    {
+        "name": "SAHUMERIOS DUENDES ALQUIMISTAS - VAINILLA ENCANTADA",
+        "cost": 860.7,
+        "publicPrice": 1800,
+        "stock": 1,
+        "image": "img/SAHUMERIO DUENDES ALQUIMISTAS VAINILLAS ENCANTADAS POSITIVIDAD.png"
+    },
+    {
+        "name": "SAHUMERIOS DUENDES ALQUIMISTAS - MUSK",
+        "cost": 860.7,
+        "publicPrice": 1800,
+        "stock": 1,
+        "image": "img/SAHUMERIO DUENDES ALQUIMISTAS MUSK BLACK LIMPIEZA.png"
+    },
+    {
+        "name": "SAHUMERIOS DUENDES ALQUIMISTAS - SALVIA BLANCA",
+        "cost": 860.7,
+        "publicPrice": 1800,
+        "stock": 1,
+        "image": "img/SAHUMERIO DUENDES ALQUIMISTAS SALVIA BLANCA DISFRUTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - BERRIES",
+        "cost": 490.26,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/BERRIES EXAGONAL.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - AQUA",
+        "cost": 490.26,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE AQUA.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - LEMONGRASS",
+        "cost": 490.26,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL LEMONGRASS ILUMINARTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - MANGO",
+        "cost": 490.26,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIOS EXAGONALES ILUMINARTE MANGO.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL LINEA BLANCA x 15 - SANDIA",
+        "cost": 490.26,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE WATERMELON.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - CHAMPA",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO CHAMPA ILUMINARTE INDIA.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - COCO",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHGUMERIO EXAGONAL ILUMINARTE INDIA COCO COCONUT.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - JAZMIN",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA JAZMINE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - LAVANDA",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA LAVANDA.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - PATCHOULI",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL PATCHOULI.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - ROSA",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA ROSE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - SANDAL WOOD",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA SANDAL WOOD.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - VIOLETAS",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA VIOLET.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA HEXAGONAL x 15 PROMO - VAINILLA",
+        "cost": 440.08,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL ILUMINARTE INDIA VAINILLA.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - CHAMPA",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUMERIO CHAMPA ILUMINARTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - FRUTILLA",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUEMRIO FRUTILLA ILUMINARTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - INCIENSO",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUMERIO INCIENSO ILUMINArte.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - LAVANDA FRANCESA",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUMERIO LAVANDA ILUMINARTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - MIRRA",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUMERIO MIRRA.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - REINA DE LA NOCHE",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUMERIO REINA DE LA NOCHE ILUMINARTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD (NUEVO) - S\u00c1NDALO",
+        "cost": 375.62,
+        "publicPrice": 800,
+        "stock": 1,
+        "image": "img/SAHUMERIO SANDALO ILUMINARTE.png"
+    },
+    {
+        "name": "SAHUMERIOS 7 CHAKRAS ( 7 X 3 ) ILUMINARTE -",
+        "cost": 970.91,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO SIETE CHAKRAS.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - 212 PARFUM",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY 212 PARFUM TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ATRAE DINERO (RIQUEZA)",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY ATRAE DINERO TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ABUNDANCIA (PROSPERIDAD)",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY ABUNDANCIA TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - BUENA ONDA (FUERZA POSITIVA)",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY BUENA ONDA TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - FELICIDAD (ALEGRIA Y DICHA)",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY FELICIDAD TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - LIMPIEZA (QUITA MALA ONDA)",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY BUENA ONDA TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - VARIEDAD",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY VARIEDAD TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS BOMBAY TRIPLE EMPASTE x 6 PROMO - ENERG\u00cdA LIMPIA",
+        "cost": 510.44,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/SAHUMERIO BOMBAY ENERGIA LIMPIA TRIPLE EMPASTE.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA ILUMINARTE POUCH X UNIDAD PROMO - VIOLETAS",
+        "cost": 290.99,
+        "publicPrice": 600,
+        "stock": 1,
+        "image": "img/SAHUMERIO ILUMINARTE INDIA VIOLETA.png"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - BERRIES",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA BERRIES.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - FRUTILLA",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA FRUTILLA.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - MANGO",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA MANGO.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - VAINILLA",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA VAINILLA.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - S\u00c1NDALO",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO SANDALO.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - ROSA",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO ROSA.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - PALO SANTO",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA PALO SANTO.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - LIM\u00d3N",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA PAQUETE LIMON.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - LAVANDA",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA LAVANDA.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - INCIENSO",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO INDIA INCIENSO.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS INDIA PAQUETE X 15 - ATRAE DINERO",
+        "cost": 420.44,
+        "publicPrice": 900,
+        "stock": 1,
+        "image": "img/SAHUMERIO ATRAE DINERO.jpeg"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - FRAGANCIA ORIENTAL",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA FRAGANCIA ORIENTAL MEDITACION AROMANZA.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - DIAMANTE NEGRO",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA DIAMANTE NEGRO AQUI Y AHORA.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - FRUTOS ROJOS",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA FRUTOS ROJOS EMPODERAMIENTO.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - GARDENIA Y FLORES BLANCAS",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA GARDENIAS FLORES BLANCAS BIENESTAR.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - LA VIDA ES BELLA",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA LA VIDA ES BELLA OPTIMISMO.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - NARANJA PIMIENTA",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA NARANJA POIMIENTA ATRACCION.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - SANDALO HINDU",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA AROMANZA SANDALO HINDU PURIFICACION.png"
+    },
+    {
+        "name": "SAHUMERIOS PALO SANTO BUENA ONDA CAJA X 8 PROMO - VARIEDAD",
+        "cost": 960.59,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA VARIEDAD AROMATICA BUENA ONDA.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI PALO SANTO BUENA ONDA - COCO VAI",
+        "cost": 655.28,
+        "publicPrice": 1400,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA MINI COCO VAINILLA PAZ INTERIOR.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI PALO SANTO BUENA ONDA - YAGRA",
+        "cost": 655.28,
+        "publicPrice": 1400,
+        "stock": 1,
+        "image": "img/SAHUMERIO PALO SANTO BUENA ONDA MINI YAGRA DE LA ABUNDANCIA PROSPERIDAD.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI PALO SANTO BUENA ONDA - VARIEDAD",
+        "cost": 655.28,
+        "publicPrice": 1400,
+        "stock": 1,
+        "image": "img/SAHUMERIO AROMANZA PAL OSANTO BUENA ONDA MINI.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI TIBETANO AROMANZA - REAL ROSE",
+        "cost": 980.53,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO MINI TIBETANOS ROSA REAL AMOR.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI TIBETANO AROMANZA - OCEAN BLUE",
+        "cost": 980.53,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO MINI TIBETANOS OCEAN BLUE PLENITUD.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI TIBETANO AROMANZA - NECTAR DE LOS DIOSES",
+        "cost": 980.53,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO MINI TIBETANOS NECTAR DE LOS DIOSES CONEXION DIVINA.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI TIBETANO AROMANZA - VARIEDAD",
+        "cost": 980.53,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO MINI TIBETANOS MIX DE FRAGANCIAS 5 FRAGANCIAS.png"
+    },
+    {
+        "name": "SAHUMERIOS MINI TIBETANO AROMANZA - 7 PODERES",
+        "cost": 980.53,
+        "publicPrice": 2000,
+        "stock": 1,
+        "image": "img/SAHUMERIO AROMANZA MINI TIBITANOS 7 PODERES.png"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ABUNDANCIA INFINITA",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA X4 ABUNDANCIA INFINITA SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ATRAE DINERO",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA ATRAE DINERO X4 SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - FUERZA INFINITA",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA X4 FUERZA INFINITA SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - DESTRABE",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA X4 DESTRABE SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - LIMPIEZA ENERG\u00c9TICA",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA X4 LIMPIEZA ENERGETICA SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - LIMPIEZA AURICA",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA X 4 LIMPIEZA AURICA SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "BOMBITA SAGRADA MADRE DEFUMACION PAQUETE X 4 - ABRECAMINO",
+        "cost": 545.33,
+        "publicPrice": 1100,
+        "stock": 1,
+        "image": "img/BOMBITA X4 ABRE CAMINOS SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - POMELO",
+        "cost": 740.7,
+        "publicPrice": 1500,
+        "stock": 1,
+        "image": "img/SAHUMERIO PREMIUM POMELO PINK GRAFERNAT SLIM.png"
+    },
+    {
+        "name": "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - UVA",
+        "cost": 740.7,
+        "publicPrice": 1500,
+        "stock": 1,
+        "image": "img/SAHUMERIO PREMIUM SLIM UVA DELICIOUS GRAPE.png"
+    },
+    {
+        "name": "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - MELON",
+        "cost": 740.7,
+        "publicPrice": 1500,
+        "stock": 1,
+        "image": "img/SAHUMERIO MELON SLIM.png"
+    },
+    {
+        "name": "SAHUMERIOS SAGRADA MADRE NATURAL PREMIUM SLIM - SANDIA",
+        "cost": 740.7,
+        "publicPrice": 1500,
+        "stock": 1,
+        "image": "img/SAHUMERIO SANDIA WATERMELON SLIM.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - ALMIZCLE",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU ALMIZCLE.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - ANTIESTRES",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONALES VISHNU ANTIESTRES.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - FLOR DE LIS",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU FLOR DE LIS.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - NAG CHAMPA",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU NAG CHAMPA.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - NARANJA - COCO",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 0,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU PATCHOLU Y NARANJA.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - MIL FLORES",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU MIL FLORES.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - MADERA DE ORIENTE",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERI OEXAGONAL MADERAS DE ORIENTE VISHNU.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - OM",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU OM.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - PATCHOULI Y NARANJA",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU PATCHOLU Y NARANJA.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - S\u00c1NDALO CANELA",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAS VISHNU SANDALO Y CANELA.png"
+    },
+    {
+        "name": "SAHUMERIOS VISHNU HEXAGONAL x 20 - ROSA BLANCA",
+        "cost": 830.16,
+        "publicPrice": 1700,
+        "stock": 1,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU TOSA BLANCA.png"
+    },
+    {
+        "name": "SAHUMERIOS TUK TUK HINDU X 100 VARILLAS PROMO - BUBBLEGUM",
+        "cost": 1890.16,
+        "publicPrice": 3800,
+        "stock": 0,
+        "image": "img/BOMBITA X 4 LIMPIEZA AURICA SAGRADA MADRE.jpg"
+    },
+    {
+        "name": "SAHUMERIOS DARSHAN DHOOP - COOL WATER",
+        "cost": 670.07,
+        "publicPrice": 1400,
+        "stock": 1,
+        "image": "img/SAHUMERIO COOL WATER DARSHAN INCENSE.png"
+    },
+    {
+        "name": "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - AROMAS DE LA INDIA",
+        "cost": 460.98,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO.COM AROMAS DE LA INDIA.png"
+    },
+    {
+        "name": "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - FRUTOS TROPICALES",
+        "cost": 460.98,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO.COM FRUTAS TROPICALES.png"
+    },
+    {
+        "name": "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - SALUD, DINERO Y AMOR",
+        "cost": 460.98,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO.COM SALUD DINERO Y AMOR.png"
+    },
+    {
+        "name": "SAHUMERIOS DARSHAN POUCH X 15 UNIDADES - MIL FLORES",
+        "cost": 460.98,
+        "publicPrice": 1000,
+        "stock": 1,
+        "image": "img/SAHUMERIO.COM MIL FLORES.png"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - UVA",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 1,
+        "image": "img/AROMATIZANTE PARA TELAS UVA.jpg"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - PAPAYA",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 1,
+        "image": "img/AROMATIZANTE PARA TELAS PAPAYA.jpg"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - TROPICAL",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 1,
+        "image": "img/AROMATIZANTE PARA TELA TROPICAL.jpg"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - LIM\u00d3N",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 1,
+        "image": "img/AROMATIZANTE PARA TELAS LIMON.jpg"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - MAGNOLIA Y FRESIAS",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 0,
+        "image": "img/SAHUMERIO EXAGONAL VISHNU PATCHOLU Y NARANJA.png"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - HAWAI",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 0,
+        "image": "imagen.png"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - COCO VAI",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 1,
+        "image": "img/AROMATIZANTE PARA TELAS COCO VAI.jpg"
+    },
+    {
+        "name": "TEXTIL AMBAR 150ml. - BEBE",
+        "cost": 1572,
+        "publicPrice": 3200,
+        "stock": 1,
+        "image": "img/AROMATIZANTE PARA TELAS BEBE.jpg"
+    }
+];
+let products = [];
+let pendingImport = [];
+let dataLoaded = false;
+
+function parsePrice(str) { return parseFloat(str.replace('$','').replace(/\./g,'').replace(',','.')); }
+function publicPrice(cost) { return Math.ceil((cost * 2) / 100) * 100; }
+function formatARS(n) { return new Intl.NumberFormat('es-AR',{style:'decimal',minimumFractionDigits:0,maximumFractionDigits:0}).format(n); }
+function getImage(name) { return imageMap[name] || "imagen.png"; }
+function prettify(name) { return name.toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase()).replace(/ - $/, '').trim(); }
+
+// ===== INIT =====
+let firebaseDb;
+function initFirebase() {
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGsYV_cnongGPRPecIrJ80ZPR_aNQ4cSE",
+      authDomain: "drahan-sahumerios.firebaseapp.com",
+      projectId: "drahan-sahumerios",
+      storageBucket: "drahan-sahumerios.firebasestorage.app",
+      messagingSenderId: "769406919765",
+      appId: "1:769406919765:web:ce34cfe17b0e81823de0dc",
+      measurementId: "G-RVWVGWEY5C",
+      databaseURL: "https://drahan-sahumerios-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    firebaseDb = firebase.database();
+}
+
+function initProducts() {
+    try {
+        const customThumbs = JSON.parse(localStorage.getItem('custom_thumbs') || '{}');
+        if (typeof thumbnails !== 'undefined') Object.assign(thumbnails, customThumbs);
+
+    } catch(e){}
+
+    initFirebase();
+    const stockRef = firebaseDb.ref('catalogo/productos');
+    // Escuchar cambios en tiempo real
+    stockRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            products = data;
+        } else {
+            // Base de datos nueva vacía, generamos iniciales
+            products = [];
+            if (typeof DEFAULT_PRODUCTS !== 'undefined') {
+                products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+            } else {
+                RAW_DATA.split('\n').forEach(line => {
+                    if (!line.trim()) return;
+                    const p = line.split('\t');
+                    if (p.length < 5) return;
+                    const cost = parsePrice(p[2]);
+                    if (isNaN(cost)) return;
+                    products.push({ name: p[1], cost, publicPrice: publicPrice(cost), stock: parseInt(p[3])||0, image: getImage(p[1]) });
+                });
+            }
+            // Guardamos la base actual por primera vez
+            saveStock(true);
+        }
+        dataLoaded = true;
+        // Refrescar vistas si se recibieron datos
+        if (typeof renderCatalog === 'function') renderCatalog();
+        if (isAdmin && document.getElementById('sec-stock') && document.getElementById('sec-stock').classList.contains('active')) {
+            if (typeof renderStockTable === 'function') renderStockTable();
+        }
+    }, (error) => {
+        // ERROR HANDLING AGREGADO
+        document.getElementById('catalog').innerHTML = `<div class="no-products">
+            <h3>🔴 Error de Conexión a la Base de Datos</h3>
+            <p style="color:var(--danger);font-weight:bold">${error.message}</p>
+        </div>`;
+    });
+}
+function saveStock(silent) {
+    if (firebaseDb) {
+        firebaseDb.ref('catalogo/productos').set(products)
+            .then(() => { if (!silent) showToast('✅ Stock sincronizado con la nube'); })
+            .catch(err => { if (!silent) showToast('❌ Error sincronizando: ' + err.message); });
+    }
+}
+
+function exportToIA() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(products));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href",     dataStr     );
+    dlAnchorElem.setAttribute("download", "mis_productos.json");
+    dlAnchorElem.click();
+    showToast('📥 Archivo mis_productos.json descargado. ¡Avisale a IA!');
+}
+
+// ===== AUTH =====
+function toggleAdmin() {
+    if (isAdmin) { logoutAdmin(); return; }
+    document.getElementById('login-modal').classList.add('show');
+    document.getElementById('admin-pass').value = '';
+    document.getElementById('login-error').style.display = 'none';
+    setTimeout(() => document.getElementById('admin-pass').focus(), 100);
+}
+function closeModal() { document.getElementById('login-modal').classList.remove('show'); }
+function openProductModal(imgSrc, name) {
+    document.getElementById('product-modal').classList.add('show');
+    document.getElementById('modal-product-img').src = imgSrc;
+    document.getElementById('modal-product-title').textContent = prettify(name);
+}
+function closeProductModal(e) {
+    if (!e || e.target.id === 'product-modal' || e.target.tagName.toLowerCase() === 'span') {
+        document.getElementById('product-modal').classList.remove('show');
+    }
+}
+function doLogin() {
+    const pass = document.getElementById('admin-pass').value;
+    if (pass === ADMIN_PASS) {
+        isAdmin = true;
+        document.body.classList.add('is-admin');
+        document.getElementById('admin-btn').textContent = '🔓 Cerrar Sesión';
+        closeModal();
+        renderCatalog();
+        showToast('✅ Sesión de administrador iniciada');
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+    }
+}
+function logoutAdmin() {
+    isAdmin = false;
+    document.body.classList.remove('is-admin');
+    document.getElementById('admin-btn').textContent = '🔒 Admin';
+    switchTab('catalogo');
+    renderCatalog();
+    showToast('🔒 Sesión de administrador cerrada');
+}
+
+// ===== CATALOG (PUBLIC) =====
+function renderCatalog() {
+    const c = document.getElementById('catalog');
+    if (!dataLoaded) {
+        c.innerHTML = '<div class="no-products" style="animation: pulse 1.5s infinite"><h3>⏳ Cargando el catálogo...</h3><p>Conectando con la base de datos de manera segura</p></div>';
+        return;
+    }
+    c.innerHTML = '';
+    const visible = products.filter(p => p.stock > 0);
+    if (visible.length === 0) {
+        c.innerHTML = '<div class="no-products"><h3>😔 No hay productos disponibles</h3><p>Volvé pronto, estamos reponiendo stock</p></div>';
+        return;
+    }
+    visible.forEach(p => {
+        // Public: only name + price. Admin: also stock badge
+        const stockBadge = isAdmin
+            ? `<span class="product-stock ${p.stock<=2?'stock-low':'stock-ok'}">${p.stock} disp.</span>`
+            : '';
+        c.innerHTML += `<article class="product-card" ${isAdmin ? `ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="dropImage(event, '${p.name.replace(/'/g, "\\'")}')"` : ''} onclick="openProductModal('${p.image}', '${p.name.replace(/'/g, "\\'")}')" style="cursor: pointer;">
+            <div class="product-image-container"><img src="${p.image}" alt="${prettify(p.name)}" class="product-image" onerror="this.src='imagen.png'"></div>
+            <div class="product-info">
+                ${isAdmin ? `<div class="admin-edit-badge">📷 Arrastrá una foto aquí</div>` : ''}
+                <h2 class="product-title">${prettify(p.name)}</h2>
+                <div class="product-footer">
+                    <p class="product-price"><span class="currency">$</span>${formatARS(p.publicPrice)}</p>
+                    ${stockBadge}
+                </div>
+            </div>
+        </article>`;
+    });
+}
+
+// ===== STOCK TABLE (ADMIN ONLY) =====
+function renderStockTable() {
+    const b = document.getElementById('stock-body');
+    b.innerHTML = '';
+    let totalItems = 0, totalValue = 0, outOfStock = 0;
+    products.forEach((p, i) => {
+        totalItems += p.stock; totalValue += p.stock * p.publicPrice;
+        if (p.stock <= 0) outOfStock++;
+        const stockClass = p.stock<=0?'stock-out':p.stock<=2?'stock-low':'stock-ok';
+        const statusText = p.stock<=0?'🔴 Sin stock':p.stock<=2?'🟡 Bajo':'🟢 OK';
+        b.innerHTML += `<tr data-name="${p.name.toLowerCase()}">
+            <td>${i+1}</td>
+            <td style="max-width:350px">${prettify(p.name)}</td>
+            <td>$${formatARS(p.cost)}</td>
+            <td style="font-weight:600;color:var(--price-color)">$${formatARS(p.publicPrice)}</td>
+            <td><input type="number" class="stock-input" value="${p.stock}" min="0" onchange="updateStock(${i},this.value)"></td>
+            <td><span class="product-stock ${stockClass}">${statusText}</span></td>
+        </tr>`;
+    });
+    document.getElementById('stats-row').innerHTML = `
+        <div class="stat-card"><h3>Total Productos</h3><div class="stat-value">${products.length}</div></div>
+        <div class="stat-card"><h3>Unidades en Stock</h3><div class="stat-value">${totalItems}</div></div>
+        <div class="stat-card"><h3>Valor del Stock</h3><div class="stat-value">$${formatARS(totalValue)}</div></div>
+        <div class="stat-card"><h3>Sin Stock</h3><div class="stat-value" style="color:var(--danger)">${outOfStock}</div></div>`;
+}
+function updateStock(i, val) { products[i].stock = parseInt(val)||0; saveStock(true); renderCatalog(); renderStockTable(); }
+function filterStock() {
+    const q = document.getElementById('stock-search').value.toLowerCase();
+    document.querySelectorAll('#stock-body tr').forEach(r => { r.style.display = r.dataset.name.includes(q)?'':'none'; });
+}
+
+// ===== PDF =====
+function downloadStockPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const pw = doc.internal.pageSize.getWidth();
+    doc.setFillColor(74,93,78); doc.rect(0,0,pw,45,'F');
+    doc.setTextColor(255); doc.setFont('helvetica','bold'); doc.setFontSize(24);
+    doc.text('DRAHAN SAHUMERIOS', pw/2, 20, {align:'center'});
+    doc.setFontSize(11); doc.setFont('helvetica','normal');
+    doc.text('Reporte de Stock — '+new Date().toLocaleDateString('es-AR'), pw/2, 30, {align:'center'});
+    doc.text(`Total: ${products.length} productos`, pw/2, 38, {align:'center'});
+    const rows = products.map((p,i) => [i+1, prettify(p.name), `$${formatARS(p.cost)}`, `$${formatARS(p.publicPrice)}`, p.stock, p.stock<=0?'Sin stock':p.stock<=2?'Bajo':'OK']);
+    doc.autoTable({ startY:52, head:[['#','Producto','Costo','P. Público','Stock','Estado']], body:rows, theme:'grid',
+        headStyles:{fillColor:[107,143,113],textColor:255,fontStyle:'bold',fontSize:9}, bodyStyles:{fontSize:8,cellPadding:3},
+        columnStyles:{0:{cellWidth:10},1:{cellWidth:75},2:{cellWidth:25},3:{cellWidth:28},4:{cellWidth:15,halign:'center'},5:{cellWidth:20,halign:'center'}},
+        alternateRowStyles:{fillColor:[245,248,245]},
+        didParseCell:function(d){if(d.column.index===5&&d.section==='body'){if(d.cell.raw==='Sin stock')d.cell.styles.textColor=[192,80,58];else if(d.cell.raw==='Bajo')d.cell.styles.textColor=[196,148,10];else d.cell.styles.textColor=[90,158,111];}},
+        margin:{left:12,right:12}});
+    doc.save('stock_armonia_natural.pdf'); showToast('📥 PDF de Stock descargado');
+}
+function downloadPriceListPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const pw = doc.internal.pageSize.getWidth();
+    doc.setFillColor(107,143,113); doc.rect(0,0,pw,40,'F');
+    doc.setTextColor(255); doc.setFont('helvetica','bold'); doc.setFontSize(22);
+    doc.text('Lista de Precios', pw/2, 18, {align:'center'});
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('DRAHAN SAHUMERIOS — '+new Date().toLocaleDateString('es-AR'), pw/2, 28, {align:'center'});
+    const rows = products.filter(p=>p.stock>0).map((p,i) => [i+1, prettify(p.name), `$${formatARS(p.publicPrice)}`]);
+    doc.autoTable({ startY:48, head:[['#','Producto','Precio']], body:rows, theme:'striped',
+        headStyles:{fillColor:[74,93,78],fontSize:10}, bodyStyles:{fontSize:9},
+        columnStyles:{0:{cellWidth:12},1:{cellWidth:130},2:{cellWidth:30,halign:'right',fontStyle:'bold'}},
+        alternateRowStyles:{fillColor:[247,245,240]}, margin:{left:12,right:12}});
+    doc.save('lista_precios_armonia_natural.pdf'); showToast('📥 Lista de Precios descargada');
+}
+
+function downloadCatalogPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p','mm','a4');
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const available = products.filter(p => p.stock > 0);
+    if (!available.length) { showToast('⚠️ No hay productos disponibles para el catálogo'); return; }
+
+    // Group products by category
+    const groups = {};
+    available.forEach(p => {
+        let cat = 'Otros';
+        if (p.name.includes('DUENDES ALQUIMISTAS')) cat = 'Duendes Alquimistas';
+        else if (p.name.includes('INDIA HEXAGONAL LINEA BLANCA')) cat = 'India Hexagonal Línea Blanca';
+        else if (p.name.includes('INDIA HEXAGONAL') && p.name.includes('PROMO')) cat = 'India Hexagonal Promo';
+        else if (p.name.includes('INDIA ILUMINARTE') && p.name.includes('NUEVO')) cat = 'India Iluminarte (Nuevo)';
+        else if (p.name.includes('INDIA ILUMINARTE') && p.name.includes('PROMO')) cat = 'India Iluminarte Promo';
+        else if (p.name.includes('7 CHAKRAS')) cat = '7 Chakras Iluminarte';
+        else if (p.name.includes('BOMBAY TRIPLE')) cat = 'Bombay Triple Empaste';
+        else if (p.name.includes('INDIA PAQUETE')) cat = 'India Paquete x15';
+        else if (p.name.includes('PALO SANTO BUENA ONDA CAJA')) cat = 'Palo Santo Buena Onda (Caja)';
+        else if (p.name.includes('MINI PALO SANTO')) cat = 'Mini Palo Santo Buena Onda';
+        else if (p.name.includes('MINI TIBETANO')) cat = 'Mini Tibetano Aromanza';
+        else if (p.name.includes('BOMBITA SAGRADA MADRE')) cat = 'Bombitas Sagrada Madre';
+        else if (p.name.includes('SAGRADA MADRE')) cat = 'Sagrada Madre Premium Slim';
+        else if (p.name.includes('VISHNU')) cat = 'Vishnu Hexagonal x20';
+        else if (p.name.includes('TUK TUK')) cat = 'Tuk Tuk Hindu';
+        else if (p.name.includes('DARSHAN')) cat = 'Darshan';
+        else if (p.name.includes('TEXTIL AMBAR')) cat = 'Textil Ambar 150ml';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(p);
+    });
+
+    // --- Cover page ---
+    doc.setFillColor(74, 93, 78);
+    doc.rect(0, 0, pw, ph, 'F');
+    // Decorative lines
+    doc.setDrawColor(140, 158, 141); doc.setLineWidth(0.5);
+    doc.rect(15, 15, pw - 30, ph - 30);
+    doc.rect(18, 18, pw - 36, ph - 36);
+    // Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(42);
+    doc.text('DRAHAN', pw / 2, ph / 2 - 20, { align: 'center' });
+    doc.text('SAHUMERIOS', pw / 2, ph / 2 + 5, { align: 'center' });
+    // Subtitle
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(14);
+    doc.text('Catálogo de Productos', pw / 2, ph / 2 + 25, { align: 'center' });
+    // Decorative divider
+    doc.setDrawColor(163, 184, 153); doc.setLineWidth(0.8);
+    doc.line(pw / 2 - 30, ph / 2 + 35, pw / 2 + 30, ph / 2 + 35);
+    // Date
+    doc.setFontSize(10); doc.setTextColor(180, 200, 180);
+    doc.text(new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' }), pw / 2, ph / 2 + 45, { align: 'center' });
+    // Footer
+    doc.setFontSize(9); doc.setTextColor(140, 158, 141);
+    doc.text('Precios expresados en pesos argentinos. Sujetos a modificaciones.', pw / 2, ph - 25, { align: 'center' });
+
+    // --- Product pages ---
+    const catKeys = Object.keys(groups);
+    catKeys.forEach((cat, catIdx) => {
+        doc.addPage();
+        let y = 20;
+
+        // Category header bar
+        doc.setFillColor(74, 93, 78);
+        doc.roundedRect(12, y - 6, pw - 24, 14, 3, 3, 'F');
+        doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+        doc.text(cat.toUpperCase(), pw / 2, y + 3, { align: 'center' });
+        y += 18;
+
+        // Subtle line
+        doc.setDrawColor(200, 210, 200); doc.setLineWidth(0.3);
+        doc.line(12, y, pw - 12, y);
+        y += 6;
+
+        const items = groups[cat];
+        items.forEach((p, i) => {
+            // Check page overflow
+            if (y > ph - 30) {
+                // Footer on current page
+                doc.setFontSize(8); doc.setTextColor(160, 170, 160);
+                doc.text('DRAHAN SAHUMERIOS — Catálogo de Productos', pw / 2, ph - 10, { align: 'center' });
+                doc.addPage();
+                y = 20;
+                // Repeat category header
+                doc.setFillColor(74, 93, 78);
+                doc.roundedRect(12, y - 6, pw - 24, 14, 3, 3, 'F');
+                doc.setTextColor(255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+                doc.text(cat.toUpperCase() + ' (cont.)', pw / 2, y + 3, { align: 'center' });
+                y += 18;
+                doc.setDrawColor(200, 210, 200); doc.setLineWidth(0.3);
+                doc.line(12, y, pw - 12, y);
+                y += 6;
+            }
+
+            // Extract variant name (after the dash)
+            let variant = '';
+            const dashIdx = p.name.lastIndexOf(' - ');
+            if (dashIdx > -1) variant = p.name.substring(dashIdx + 3).trim();
+
+            // Product row
+            // Alternating background
+            if (i % 2 === 0) {
+                doc.setFillColor(247, 245, 240);
+                doc.rect(12, y - 4, pw - 24, 15, 'F');
+            }
+
+            // Thumbnail
+            if (p.image && typeof thumbnails !== 'undefined' && thumbnails[p.image]) {
+                doc.addImage(thumbnails[p.image], 'JPEG', 14, y - 3, 11, 11);
+            }
+
+            // Variant or full name
+            doc.setTextColor(74, 93, 78); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+            const displayName = variant ? prettify(variant) : prettify(p.name);
+            doc.text(displayName, 28, y + 3);
+
+            // Price
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+            doc.setTextColor(107, 143, 113);
+            doc.text(`$ ${formatARS(p.publicPrice)}`, pw - 18, y + 3, { align: 'right' });
+
+            // Dots between name and price
+            doc.setTextColor(200, 210, 200); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+            const nameWidth = doc.getTextWidth(displayName) * (10/8);
+            const priceText = `$ ${formatARS(p.publicPrice)}`;
+            const priceWidth = doc.getTextWidth(priceText) * (11/8);
+            const dotsStart = 28 + nameWidth + 5;
+            const dotsEnd = pw - 18 - priceWidth - 5;
+            if (dotsEnd > dotsStart) {
+                const dots = '.'.repeat(Math.floor((dotsEnd - dotsStart) / 1.5));
+                doc.text(dots, dotsStart, y + 3);
+            }
+
+            y += 16;
+        });
+
+        // Page footer
+        doc.setFontSize(8); doc.setTextColor(160, 170, 160);
+        doc.text('Armonía Natural — Catálogo de Productos', pw / 2, ph - 10, { align: 'center' });
+    });
+
+    doc.save('catalogo_armonia_natural.pdf');
+    showToast('📥 Catálogo descargado');
+}
+
+// ===== IMPORT =====
+function handleFileUpload(e) {
+    const f = e.target.files[0]; if(!f) return;
+    if(f.name.endsWith('.pdf')) parsePDF(f);
+    else { const r=new FileReader(); r.onload=ev=>processImportText(ev.target.result); r.readAsText(f); }
+}
+async function parsePDF(file) {
+    try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const data=await file.arrayBuffer(); const pdf=await pdfjsLib.getDocument({data}).promise;
+        let text='';
+        for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();text+=c.items.map(it=>it.str).join('\t')+'\n';}
+        processImportText(text);
+    } catch(err) { showToast('❌ Error al leer el PDF: '+err.message); }
+}
+function processImportText(text) {
+    pendingImport = [];
+    text.split('\n').forEach(line => {
+        if(!line.trim()) return;
+        products.forEach(p => {
+            const n = p.name.toLowerCase().replace(/\s+/g,' ').trim();
+            const l = line.toLowerCase().replace(/\s+/g,' ').trim();
+            if(l.includes(n.substring(0,Math.min(30,n.length)))) {
+                const qm = line.match(/\t(\d+)\t/);
+                const qty = qm ? parseInt(qm[1]) : 1;
+                if(!pendingImport.find(x=>x.name===p.name)) pendingImport.push({name:p.name, qty});
+            }
+        });
+    });
+    showImportResults();
+}
+function processManualImport() {
+    const text = document.getElementById('manual-import').value;
+    if(!text.trim()){ showToast('⚠️ Pegá el contenido del pedido primero'); return; }
+    pendingImport = [];
+    text.split('\n').forEach(line => {
+        if(!line.trim()) return;
+        const parts = line.split('\t');
+        if(parts.length>=4) {
+            const name = parts[1]?.trim();
+            const qty = parseInt(parts[3])||1;
+            if(name) {
+                const match = products.find(p=>p.name.toLowerCase()===name.toLowerCase());
+                if(match) pendingImport.push({name:match.name, qty});
+                else pendingImport.push({name, qty, isNew:true});
+            }
+        }
+    });
+    showImportResults();
+}
+function showImportResults() {
+    const div=document.getElementById('import-results'), items=document.getElementById('import-items');
+    if(!pendingImport.length){ showToast('⚠️ No se encontraron productos'); return; }
+    div.style.display='block';
+    items.innerHTML = pendingImport.map(p=>`<div class="import-item"><span>${prettify(p.name)} ${p.isNew?'<span style="color:var(--warning);font-size:0.8rem">(NUEVO)</span>':''}</span><span class="qty">+${p.qty} unidades</span></div>`).join('');
+    showToast(`📦 Se encontraron ${pendingImport.length} productos para importar`);
+}
+function applyImport() {
+    pendingImport.forEach(imp => {
+        const idx = products.findIndex(p=>p.name===imp.name);
+        if(idx>=0) products[idx].stock += imp.qty;
+        else if(imp.isNew) products.push({name:imp.name, cost:0, publicPrice:0, stock:imp.qty, image:'imagen.png'});
+    });
+    saveStock(); renderCatalog(); renderStockTable();
+    document.getElementById('import-results').style.display='none';
+    pendingImport = []; showToast('✅ Stock actualizado');
+}
+function cancelImport() { document.getElementById('import-results').style.display='none'; pendingImport=[]; }
+
+// ===== UI =====
+function switchTab(tab) {
+    if ((tab==='stock'||tab==='importar') && !isAdmin) { toggleAdmin(); return; }
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('sec-'+tab).classList.add('active');
+    document.querySelector(`.nav-tab[data-tab="${tab}"]`).classList.add('active');
+    if(tab==='stock') renderStockTable();
+}
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+// Drag & drop
+const zone = document.getElementById('import-zone');
+if(zone){
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');
+        const f=e.dataTransfer.files[0];
+        if(f){if(f.name.endsWith('.pdf'))parsePDF(f);else{const r=new FileReader();r.onload=ev=>processImportText(ev.target.result);r.readAsText(f);}}
+    });
+}
+
+// Init
+initProducts();
+renderCatalog();
+
+// Admin Image Drop
+function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('dragover'); }
+function dragLeave(e) { e.currentTarget.classList.remove('dragover'); }
+function dropImage(e, pName) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        const idx = products.findIndex(x => x.name === pName);
+        if (idx !== -1) {
+            const newPath = 'img/' + file.name;
+            products[idx].image = newPath;
+            saveStock(true);
+            
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 60;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } }
+                    else { if (h > MAX) { w *= MAX/h; h = MAX; } }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    if (typeof thumbnails !== 'undefined') {
+                        thumbnails[newPath] = canvas.toDataURL('image/jpeg', 0.8);
+                        const customThumbs = JSON.parse(localStorage.getItem('custom_thumbs') || '{}');
+                        customThumbs[newPath] = thumbnails[newPath];
+                        localStorage.setItem('custom_thumbs', JSON.stringify(customThumbs));
+                    }
+                    renderCatalog();
+                    showToast('📸 Foto actualizada para ' + prettify(pName));
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+}
+</script>
+</body>
+</html>
